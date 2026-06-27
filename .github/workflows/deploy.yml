@@ -29,27 +29,39 @@ jobs:
 
     - name: Run Tests
       run: |
-        python3 -m pytest -v
+        python -m pytest -v
 
     - name: Build Docker Image
       run: |
         docker build -t flask-api:${{ github.sha }} .
 
   deploy:
+        needs: build-test
 
-    needs: build-test
+        runs-on: ubuntu-latest
 
-    runs-on: ubuntu-latest
+        steps:
+          - name: Checkout Repository
+            uses: actions/checkout@v4
 
-    steps:
+          - name: Create Kind Cluster
+            uses: helm/kind-action@v1
 
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+          - name: Setup Helm
+            uses: azure/setup-helm@v4
 
-    - name: Setup Helm
-      uses: azure/setup-helm@v4
+          - name: Verify Cluster
+            run: |
+                kubectl cluster-info
+                kubectl get nodes
 
-    - name: Deploy
-      run: |
-        echo "Deploying using Helm..."
-        helm upgrade --install flask-api ./helm/flask-api
+          - name: Deploy
+            run: |
+                helm upgrade --install flask-api ./helm/flask-api \
+                --set image.repository=flask-api \
+                --set image.tag=${{ github.sha }}
+
+          - name: Verify Deployment
+            run: |
+                kubectl get pods
+                kubectl get svc
