@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: flask-api
-  tag: latest
+  tag: v0.0.0
 
 service:
   type: LoadBalancer
