@@ -86,10 +86,25 @@ jobs:
           - name: Deploy
             run: |
                 helm upgrade --install flask-api ./helm/flask-api \
-                --set image.repository=flask-api \
-                --set image.tag=${{ github.sha }}
+                --set image.repository=${{ secrets.DOCKER_USERNAME }}/flask-api \
+                --set image.tag=${{ env.VERSION }}
 
           - name: Verify Deployment
             run: |
                 kubectl get pods
                 kubectl get svc
+          
+          - name: Wait
+            run: sleep 20
+
+          - name: Smoke Test
+            run: |
+                kubectl port-forward service/flask-api-service 5000:5000 &
+                sleep 5
+
+                curl --fail http://localhost:5000/health
+
+          - name: Rollback
+            if: failure()
+            run: |
+                helm rollback flask-api
